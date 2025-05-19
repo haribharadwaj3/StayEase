@@ -1,0 +1,181 @@
+<%- include('../partials/head') %>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  </head>
+  <body>
+    <%- include('../partials/nav') %>
+    <main class="container mx-auto mt-20 px-4">
+      <h2 class="text-6xl font-bold text-red-500 mb-4 text-center">Make a Booking</h2>
+      
+      <div class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-2xl p-6">
+        <!-- Add house name display -->
+        <div class="mb-4 text-center">
+          <h3 class="text-2xl font-bold text-gray-800" id="houseName"></h3>
+        </div>
+
+        <form id="bookingForm" class="space-y-4">
+          <!-- Add hidden inputs for house information -->
+          <input type="hidden" id="houseId">
+          <input type="hidden" id="houseName">
+          
+          <div>
+            <label class="block text-gray-700 text-sm font-bold mb-2" for="name">
+              Name
+            </label>
+            <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700" 
+                   id="name" type="text" required>
+          </div>
+          
+          <div>
+            <label class="block text-gray-700 text-sm font-bold mb-2" for="email">
+              Email
+            </label>
+            <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700" 
+                   id="email" type="email" required>
+          </div>
+          
+          <div>
+            <label class="block text-gray-700 text-sm font-bold mb-2" for="date">
+              Date
+            </label>
+            <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700" 
+                   id="date" type="text" required>
+          </div>
+          
+          <div>
+            <label class="block text-gray-700 text-sm font-bold mb-2" for="time">
+              Time
+            </label>
+            <select class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700" 
+                    id="time" required>
+              <option value="">Select a time</option>
+              <% for(let i = 9; i <= 17; i++) { %>
+                <option value="<%= i %>:00"><%= i %>:00</option>
+              <% } %>
+            </select>
+          </div>
+          
+          <button type="submit" 
+                  class="w-full bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+            Book Now
+          </button>
+        </form>
+      </div>
+
+      <div id="bookingsList" class="mt-8 max-w-2xl mx-auto">
+        <h3 class="text-2xl font-bold text-gray-800 mb-4">Your Bookings</h3>
+        <div id="bookingsContainer" class="space-y-4"></div>
+      </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script>
+      // Initialize date picker
+      flatpickr("#date", {
+        minDate: "today",
+        dateFormat: "Y-m-d"
+      });
+
+      document.addEventListener('DOMContentLoaded', function() {
+        // Get house information from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const houseId = urlParams.get('houseId');
+        const houseName = urlParams.get('houseName');
+
+        // Set house information
+        document.getElementById('houseId').value = houseId;
+        document.getElementById('houseName').value = houseName;
+        document.getElementById('houseName').textContent = `Booking for ${houseName}`;
+      });
+
+      // Handle form submission
+      document.getElementById('bookingForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const formData = {
+          houseId: document.getElementById('houseId').value,
+          houseName: document.getElementById('houseName').value,
+          name: document.getElementById('name').value,
+          email: document.getElementById('email').value,
+          date: document.getElementById('date').value,
+          time: document.getElementById('time').value
+        };
+
+        try {
+          const response = await fetch('/api/bookings', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            alert(`Booking successful for ${formData.houseName}!`);
+            document.getElementById('bookingForm').reset();
+            loadBookings();
+          } else {
+            alert(`Booking failed: ${data.message || 'Please try again'}`);
+            console.error('Booking error:', data);
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert('An error occurred. Please check console for details.');
+        }
+      });
+
+      // Load existing bookings
+      async function loadBookings() {
+        try {
+          const response = await fetch('/api/bookings');
+          const bookings = await response.json();
+          
+          const container = document.getElementById('bookingsContainer');
+          container.innerHTML = bookings.map(booking => `
+            <div class="bg-white p-4 rounded-lg shadow">
+              <p class="font-bold">${booking.houseName}</p>
+              <p class="text-gray-600">Booked by: ${booking.name}</p>
+              <p class="text-gray-600">Date: ${booking.date} at ${booking.time}</p>
+              <button onclick="cancelBooking('${booking._id}')" 
+                      class="text-red-500 text-sm mt-2">
+                Cancel Booking
+              </button>
+            </div>
+          `).join('');
+        } catch (error) {
+          console.error('Error loading bookings:', error);
+        }
+      }
+
+      // Cancel booking
+      async function cancelBooking(id) {
+        if (confirm('Are you sure you want to cancel this booking?')) {
+          try {
+            const response = await fetch(`/api/bookings/${id}`, {
+              method: 'DELETE',
+              headers: {
+                'Content-Type': 'application/json'
+              }
+            });
+            
+            if (response.ok) {
+              alert('Booking cancelled successfully');
+              loadBookings();
+            } else {
+              const data = await response.json();
+              alert(`Failed to cancel booking: ${data.message || 'Please try again'}`);
+              console.error('Cancel error:', data);
+            }
+          } catch (error) {
+            console.error('Error canceling booking:', error);
+            alert('Error cancelling booking. Please check console for details.');
+          }
+        }
+      }
+
+      // Load bookings when page loads
+      loadBookings();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,11 @@
+# Ignore node modules and env files
+node_modules/
+uploads/
+.env
+
+# Logs
+*.log
+
+# OS / Editor
+.DS_Store
+.vscode/
