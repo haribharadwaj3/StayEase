@@ -20,7 +20,7 @@ const bookingRoutes = require('./routes/bookings');
 const app = express();
 
 // MongoDB URI and PORT from .env
-const DB_PATH = process.env.MONGODB_URI;
+const DB_PATH = process.env.DB_PATH;
 const PORT = process.env.PORT || 3000;
 
 // MongoDB session store
@@ -70,7 +70,7 @@ app.use("/homes/uploads", express.static(path.join(rootDir, 'uploads')));
 
 // Session config
 app.use(session({
-  secret: process.env.SESSION_SECRET,
+  secret: process.env.SESSION_SECRET || 'fallback-secret',
   resave: false,
   saveUninitialized: true,
   store
